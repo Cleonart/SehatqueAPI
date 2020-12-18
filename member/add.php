@@ -2,6 +2,7 @@
 
 	header('Access-Control-Allow-Origin: *');
 	include '../api_conf.php';
+	require './send_confirmation.php';
 
 	// data request from json
 	$request = file_get_contents("php://input");
@@ -11,24 +12,40 @@
 	$enterpriser_name             = $data -> enterpriser_name;
 	$enterpriser_email            = $data -> enterpriser_email;
 	$enterpriser_password         = $data -> enterpriser_password;
-	$enterpriser_telephone_number = $data -> enterpriser_telephone_number;
 	$enterpriser_link_referral    = $data -> enterpriser_link_referral;
 	$enterpriser_link_referee     = $data -> enterpriser_link_referee;
 
-	$data = $dale->kueri("INSERT INTO `enterpriser` 
-						  SET enterpriser_id               = '".$id."', 
-							  enterpriser_name             = '".$enterpriser_name."', 
-						      enterpriser_email            = '".$enterpriser_email."',
-						      enterpriser_password         = '".$enterpriser_password."',
-						      enterpriser_telephone_number = '".$enterpriser_telephone_number."',
-						      enterpriser_link_referral    = '".$enterpriser_link_referral."',
-						      enterpriser_link_referee     = '".$enterpriser_link_referee."'
-	 					    ON DUPLICATE KEY UPDATE
-	 					      enterpriser_name             = '".$enterpriser_name."', 
-						      enterpriser_email            = '".$enterpriser_email."',
-						      enterpriser_password         = '".$enterpriser_password."',
-						      enterpriser_telephone_number = '".$enterpriser_telephone_number."',
-						      enterpriser_link_referral    = '".$enterpriser_link_referral."',
-						      enterpriser_link_referee     = '".$enterpriser_link_referee."'");
-	echo json_encode($data);
+
+	// email validation
+	$email_exist = $dale->kueri("SELECT * FROM `enterpriser` WHERE `enterpriser_email` = '".$enterpriser_email."'");
+	$email_exist = json_decode($email_exist);
+
+	// email exist
+	if(sizeof($email_exist) > 0){
+		echo json_encode(array('error_code' => 'email_already_registered'));
+	}
+
+	// if email didn't exist
+	else{
+
+		$enterpriser_email_confirmation = md5(date('U') . $enterpriser_name);
+		$data = $dale->kueri("INSERT INTO `enterpriser` 
+							  SET enterpriser_id                 = '".$id."', 
+								  enterpriser_name               = '".$enterpriser_name."',
+							      enterpriser_email              = '".$enterpriser_email."',
+							      enterpriser_password           = '".$enterpriser_password."',
+							      enterpriser_link_referral      = '".$enterpriser_link_referral."',
+							      enterpriser_link_referee       = '".$enterpriser_link_referee."',
+							      enterpriser_email_confirmation = '".$enterpriser_email_confirmation."'
+		 					    ON DUPLICATE KEY UPDATE
+		 					      enterpriser_name               = '".$enterpriser_name."', 
+							      enterpriser_email              = '".$enterpriser_email."',
+							      enterpriser_password           = '".$enterpriser_password."',
+							      enterpriser_link_referral      = '".$enterpriser_link_referral."',
+							      enterpriser_link_referee       = '".$enterpriser_link_referee."',
+							      enterpriser_email_confirmation = '".$enterpriser_email_confirmation."'");
+
+		send_message_confirmation_via_email($enterpriser_email, $enterpriser_email_confirmation);
+		echo json_encode(array('error_code' => 'success'));
+	}
 ?>
