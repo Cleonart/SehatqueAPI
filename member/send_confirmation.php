@@ -4,7 +4,7 @@
 	use PHPMailer\PHPMailer\Exception;
 
 	require '../vendor/autoload.php';
-
+	
 	function send_message_confirmation_via_email($email, $auth_code){
 		$mail = new PHPMailer(true);
 		try{
